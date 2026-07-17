@@ -57,18 +57,20 @@ jobs:
           extensions: mysqli, curl, gd, mbstring, zip
 
       # Step 3: 下载 OpenCart 4.0.2.3 → 部署 → 配置 → 导入 SQL → 启动 :8080
+      #   注意：用 /tmp/www 代替 /var/www/html（GitHub runner 没有 /var/www 写权限）
       - name: Setup OpenCart
         run: |
           curl -sL https://github.com/opencart/opencart/archive/refs/tags/4.0.2.3.zip -o /tmp/oc.zip
           unzip -q /tmp/oc.zip -d /tmp/oc
-          mv /tmp/oc/opencart-4.0.2.3/upload /var/www/html
-          cp /var/www/html/config-dist.php /var/www/html/config.php
-          cp /var/www/html/admin/config-dist.php /var/www/html/admin/config.php
-          chmod -R 755 /var/www/html
+          mkdir -p /tmp/www
+          mv /tmp/oc/opencart-4.0.2.3/upload/* /tmp/www/
+          cp /tmp/www/config-dist.php /tmp/www/config.php
+          cp /tmp/www/admin/config-dist.php /tmp/www/admin/config.php
+          chmod -R 755 /tmp/www
           # 合并替换: localhost→127.0.0.1（避免 socket 问题）+ 密码设为 root
-          sed -i "s/'localhost'/'127.0.0.1'/;s/= ''/ = 'root'/" /var/www/html/config.php
-          mysql -h 127.0.0.1 -uroot -proot opencart < /var/www/html/install/opencart.sql
-          php -S 127.0.0.1:8080 -t /var/www/html &
+          sed -i "s/'localhost'/'127.0.0.1'/;s/= ''/ = 'root'/" /tmp/www/config.php
+          mysql -h 127.0.0.1 -uroot -proot opencart < /tmp/www/install/opencart.sql
+          php -S 127.0.0.1:8080 -t /tmp/www &
           sleep 3
       # Step 4: 安装 Python 3.12
       - uses: actions/setup-python@v5
@@ -123,13 +125,14 @@ jobs:
         run: |
           curl -sL https://github.com/opencart/opencart/archive/refs/tags/4.0.2.3.zip -o /tmp/oc.zip
           unzip -q /tmp/oc.zip -d /tmp/oc
-          mv /tmp/oc/opencart-4.0.2.3/upload /var/www/html
-          cp /var/www/html/config-dist.php /var/www/html/config.php
-          cp /var/www/html/admin/config-dist.php /var/www/html/admin/config.php
-          chmod -R 755 /var/www/html
-          sed -i "s/'localhost'/'127.0.0.1'/;s/= ''/ = 'root'/" /var/www/html/config.php
-          mysql -h 127.0.0.1 -uroot -proot opencart < /var/www/html/install/opencart.sql
-          php -S 127.0.0.1:8080 -t /var/www/html &
+          mkdir -p /tmp/www
+          mv /tmp/oc/opencart-4.0.2.3/upload/* /tmp/www/
+          cp /tmp/www/config-dist.php /tmp/www/config.php
+          cp /tmp/www/admin/config-dist.php /tmp/www/admin/config.php
+          chmod -R 755 /tmp/www
+          sed -i "s/'localhost'/'127.0.0.1'/;s/= ''/ = 'root'/" /tmp/www/config.php
+          mysql -h 127.0.0.1 -uroot -proot opencart < /tmp/www/install/opencart.sql
+          php -S 127.0.0.1:8080 -t /tmp/www &
           sleep 3
       - uses: actions/setup-python@v5
         with:
