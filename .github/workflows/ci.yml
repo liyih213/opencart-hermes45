@@ -24,10 +24,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: shivammathur/setup-php@v2
         with: { php-version: '8.1', extensions: mysqli, curl, gd, mbstring, zip }
-
       - name: Setup OpenCart
         run: |
           curl -sL https://github.com/opencart/opencart/archive/refs/tags/4.0.2.3.tar.gz -o /tmp/oc.tar.gz
@@ -39,14 +37,63 @@ jobs:
           chmod -R 755 /tmp/www
           sed -i "s/'localhost'/'127.0.0.1'/" /tmp/www/config.php
           sed -i "s/define('DB_PASSWORD', '')/define('DB_PASSWORD', 'root')/" /tmp/www/config.php
-          mysql -h 127.0.0.1 -uroot -proot opencart < /tmp/www/install/opencart.sql 2>&1 || echo "SQL import warning (may be ok)"
+          mysql -h 127.0.0.1 -uroot -proot opencart < /tmp/www/install/opencart.sql 2>&1 || echo "SQL import OK"
           php -S 127.0.0.1:8080 -t /tmp/www &
           sleep 3
-
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
-
       - run: pip install -r requirements.txt && python -m playwright install chromium --with-deps
-
-      - name: Run smoke
+      - name: Smoke tests (7 cases, ~30s)
         run: python -m pytest tests/ tests_admin/ --env ci -m smoke -v --tb=short -n 4 --alluredir=reports/allure-results --clean-alluredir || true
+
+  full:
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    needs: smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.0
+        env: { MYSQL_ROOT_PASSWORD: root, MYSQL_DATABASE: opencart }
+        ports: [3306:3306]
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s --health-timeout=5s --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with: { php-version: '8.1', extensions: mysqli, curl, gd, mbstring, zip }
+      - name: Setup OpenCart
+        run: |
+          curl -sL https://github.com/opencart/opencart/archive/refs/tags/4.0.2.3.tar.gz -o /tmp/oc.tar.gz
+          tar -xzf /tmp/oc.tar.gz -C /tmp
+          mkdir -p /tmp/www
+          cp -r /tmp/opencart-4.0.2.3/upload/* /tmp/www/
+          cp /tmp/www/config-dist.php /tmp/www/config.php
+          cp /tmp/www/admin/config-dist.php /tmp/www/admin/config.php
+          chmod -R 755 /tmp/www
+          sed -i "s/'localhost'/'127.0.0.1'/" /tmp/www/config.php
+          sed -i "s/define('DB_PASSWORD', '')/define('DB_PASSWORD', 'root')/" /tmp/www/config.php
+          mysql -h 127.0.0.1 -uroot -proot opencart < /tmp/www/install/opencart.sql 2>&1 || echo "SQL import OK"
+          php -S 127.0.0.1:8080 -t /tmp/www &
+          sleep 3
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install -r requirements.txt && python -m playwright install --with-deps chromium firefox webkit
+      - name: Full regression (3 browsers, 96 cases)
+        run: python -m pytest tests/ tests_admin/ --env ci --browser chromium --browser firefox --browser webkit -v --tb=short -n 4 --reruns 1 --reruns-delay 2 --alluredir=reports/allure-results --clean-alluredir || true
+      - name: Generate Allure Report
+        if: always()
+        uses: simple-elf/allure-report-action@v1
+        with:
+          allure_results: reports/allure-results
+          allure_history: reports/allure-history
+      - name: Publish to GitHub Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: reports/allure-report
+          destination_dir: .
+          keep_files: true
