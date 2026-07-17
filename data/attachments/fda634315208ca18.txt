@@ -1,0 +1,8 @@
+DEBUG    opencart_ui:conftest.py:112 playwright-stealth 已注入
+INFO     opencart_ui:base_page.py:54 导航至: http://127.0.0.1:8080/index.php?route=account/login
+INFO     opencart_ui:login_page.py:41 正在登录: wrong@email.com
+DEBUG    opencart_ui:base_page.py:99 填充 #input-email: wrong@email.com
+DEBUG    opencart_ui:conftest.py:112 playwright-stealth 已注入
+INFO     opencart_ui:base_page.py:54 导航至: http://127.0.0.1:8080/index.php?route=account/login
+INFO     opencart_ui:login_page.py:41 正在登录: wrong@email.com
+DEBUG    opencart_ui:base_page.py:99 填充 #input-email: wrong@email.com

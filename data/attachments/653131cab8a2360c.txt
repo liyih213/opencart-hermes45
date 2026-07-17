@@ -1,0 +1,8 @@
+DEBUG    opencart_ui:conftest.py:112 playwright-stealth 已注入
+INFO     opencart_ui:base_page.py:54 导航至: http://127.0.0.1:8080/admin
+INFO     opencart_ui:admin_login_page.py:21 后台登录: admin
+DEBUG    opencart_ui:base_page.py:99 填充 #input-username: admin
+DEBUG    opencart_ui:conftest.py:112 playwright-stealth 已注入
+INFO     opencart_ui:base_page.py:54 导航至: http://127.0.0.1:8080/admin
+INFO     opencart_ui:admin_login_page.py:21 后台登录: admin
+DEBUG    opencart_ui:base_page.py:99 填充 #input-username: admin

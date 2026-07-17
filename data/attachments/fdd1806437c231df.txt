@@ -1,0 +1,6 @@
+DEBUG    opencart_ui:conftest.py:112 playwright-stealth 已注入
+INFO     opencart_ui:base_page.py:54 导航至: http://127.0.0.1:8080
+INFO     opencart_ui:home_page.py:66 导航分类: Desktops
+DEBUG    opencart_ui:conftest.py:112 playwright-stealth 已注入
+INFO     opencart_ui:base_page.py:54 导航至: http://127.0.0.1:8080
+INFO     opencart_ui:home_page.py:66 导航分类: Desktops

@@ -1,0 +1,4 @@
+DEBUG    opencart_ui:conftest.py:112 playwright-stealth 已注入
+INFO     opencart_ui:base_page.py:54 导航至: http://127.0.0.1:8080/index.php?route=checkout/cart&language=en-gb
+DEBUG    opencart_ui:conftest.py:112 playwright-stealth 已注入
+INFO     opencart_ui:base_page.py:54 导航至: http://127.0.0.1:8080/index.php?route=checkout/cart&language=en-gb
