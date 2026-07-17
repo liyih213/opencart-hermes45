@@ -1,0 +1,63 @@
+# ============================================================
+# OpenCart UI 自动化测试 — 测试数据
+# ============================================================
+
+# 账号信息
+accounts:
+  valid:
+    email: "fixtest@test.com"
+    password: "test123"
+    name: "fixtest"
+
+  invalid:
+    email: "wrong@email.com"
+    password: "wrongpass"
+    expected_error: "Warning: No match for E-Mail Address and/or Password."
+
+# 搜索测试数据
+search:
+  valid_keywords:
+    - "Mac"
+    - "iPhone"
+    - "Canon"
+  invalid_keyword: "xyznonexistent999"
+  expected_no_result_text: "There is no product that matches the search criteria."
+
+# 产品测试数据
+products:
+  macbook:
+    name: "MacBook"
+    expected_price: "$602.00"
+
+  iphone:
+    name: "iPhone"
+    expected_price: "$123.20"
+
+  canon_eos:
+    name: "Canon EOS 5D"
+
+# 导航菜单项 (navbar categories)
+navigation:
+  top_categories:
+    - "Desktops"
+    - "Laptops & Notebooks"
+    - "Components"
+    - "Tablets"
+    - "Software"
+    - "Phones & PDAs"
+    - "Cameras"
+    - "MP3 Players"
+
+# 购物车
+cart:
+  expected_empty_message: "Your shopping cart is empty!"
+
+# 结账页面验证项
+checkout:
+  steps:
+    - "Step 1: Checkout Options"
+    - "Step 2: Billing Details"
+    - "Step 3: Delivery Details"
+    - "Step 4: Delivery Method"
+    - "Step 5: Payment Method"
+    - "Step 6: Confirm Order"

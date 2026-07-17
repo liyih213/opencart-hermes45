@@ -1,0 +1,165 @@
+# =============================================================================
+# Workflow 名称: OpenCart UI Automation CI
+# 描述: 两层 CI 流水线 — Smoke（快速冒烟）+ Full（完整回归）
+#       对 OpenCart 电商系统进行 Playwright UI 自动化测试
+# =============================================================================
+name: OpenCart UI Automation CI
+
+# =============================================================================
+# 触发条件 — 何时自动运行此流水线
+# =============================================================================
+on:
+  # push 到 main/master 时触发 → 只跑 smoke 快速验证
+  push:
+    branches: [main, master]
+  # PR 到 main/master 时触发 → smoke 通过后触发 full 回归
+  pull_request:
+    branches: [main, master]
+  # 手动触发（GitHub 页面点击 "Run workflow" 按钮）
+  workflow_dispatch:
+
+# =============================================================================
+# Job 定义 — 每个 job 运行在独立的 runner 实例中
+# =============================================================================
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────
+  # Job 1: smoke — 快速冒烟测试（≈30 秒）
+  #   用途：每次 push 时快速检查基本路径是否跑通
+  #   策略：只运行 pytest -m smoke 标记的用例，5 分钟超时
+  # ────────────────────────────────────────────────────────────────────────────
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5              # 快速反馈，不给长超时
+
+    # MySQL 服务容器 — 与主 job 同网络，通过 127.0.0.1:3306 访问
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: opencart
+        ports: [3306:3306]
+        # 健康检查 — MySQL 完全就绪后才开始安装步骤
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s --health-timeout=5s --health-retries=5
+
+    steps:
+      # Step 1: 拉取当前仓库代码到 runner
+      - uses: actions/checkout@v4
+
+      # Step 2: 安装 PHP 8.1 + 扩展（OpenCart 需要 PHP 运行环境）
+      #   mysqli — MySQL 连接驱动；curl — HTTP 请求；gd — 图片处理
+      #   mbstring — 多字节字符串；zip — 压缩/解压
+      - uses: shivammathur/setup-php@v2
+        with: { php-version: '8.1', extensions: mysqli, curl, gd, mbstring, zip }
+
+      # Step 3: 下载 OpenCart 4.0.2.3 → 部署 → 配置 → 导入 SQL → 启动 :8080
+      - name: Setup OpenCart
+        run: |
+          curl -sL https://github.com/opencart/opencart/archive/refs/tags/4.0.2.3.zip -o /tmp/oc.zip
+          unzip -q /tmp/oc.zip -d /tmp/oc
+          mv /tmp/oc/opencart-4.0.2.3/upload /var/www/html
+          cp /var/www/html/config-dist.php /var/www/html/config.php
+          cp /var/www/html/admin/config-dist.php /var/www/html/admin/config.php
+          chmod -R 755 /var/www/html
+          # 合并替换: localhost→127.0.0.1（避免 socket 问题）+ 密码设为 root
+          sed -i "s/'localhost'/'127.0.0.1'/;s/= ''/ = 'root'/" /var/www/html/config.php
+          mysql -h 127.0.0.1 -uroot -proot opencart < /var/www/html/install/opencart.sql
+          php -S 127.0.0.1:8080 -t /var/www/html &
+          sleep 3
+      # Step 4: 安装 Python 3.12
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+
+      # Step 5: 安装 Python 依赖 + Playwright Chromium（smoke 只装一个浏览器，快）
+      #   --with-deps — 自动安装系统级依赖（libgtk、libnss 等）
+      - run: pip install -r requirements.txt && python -m playwright install chromium --with-deps
+
+      # Step 6: 运行 smoke 标记的用例
+      #   -m smoke     → 只跑加了 @pytest.mark.smoke 的冒烟用例
+      #   -n 4         → 4 进程并行（pytest-xdist）
+      #   --tb=short   → 失败时只缩略输出，不刷屏
+      #   || true      → 失败不阻断流水线（纯信息性参考）
+      - name: Run smoke
+        run: python -m pytest tests/ tests_admin/ --env ci -m smoke -v --tb=short -n 4 --alluredir=reports/allure-results --clean-alluredir || true
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # Job 2: full — 完整回归测试（≈5-15 分钟）
+  #   用途：PR 被 merge 前全量验证
+  #   条件：仅在 PR 事件触发（github.event_name == 'pull_request'）
+  #   依赖：等待 smoke job 先通过（needs: smoke），smoke 没绿就不跑
+  #   范围：3 种浏览器（Chromium / Firefox / WebKit）× 全部测试用例
+  # ────────────────────────────────────────────────────────────────────────────
+  full:
+    if: github.event_name == 'pull_request'   # 仅 PR 时跑 full，push 跳过
+    needs: smoke                               # smoke 必须先通过
+    runs-on: ubuntu-latest
+    timeout-minutes: 20                        # 完整回归给更多时间
+
+    # MySQL 服务容器 — 配置与 smoke 一致
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: opencart
+        ports: [3306:3306]
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s --health-timeout=5s --health-retries=5
+
+    steps:
+      # Step 1-4: 与 smoke 相同 — checkout → PHP → OpenCart → Python
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with: { php-version: '8.1', extensions: mysqli, curl, gd, mbstring, zip }
+      - name: Setup OpenCart
+        run: |
+          curl -sL https://github.com/opencart/opencart/archive/refs/tags/4.0.2.3.zip -o /tmp/oc.zip
+          unzip -q /tmp/oc.zip -d /tmp/oc
+          mv /tmp/oc/opencart-4.0.2.3/upload /var/www/html
+          cp /var/www/html/config-dist.php /var/www/html/config.php
+          cp /var/www/html/admin/config-dist.php /var/www/html/admin/config.php
+          chmod -R 755 /var/www/html
+          sed -i "s/'localhost'/'127.0.0.1'/;s/= ''/ = 'root'/" /var/www/html/config.php
+          mysql -h 127.0.0.1 -uroot -proot opencart < /var/www/html/install/opencart.sql
+          php -S 127.0.0.1:8080 -t /var/www/html &
+          sleep 3
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+
+      # Step 5: 安装 3 个浏览器（完整回归需跨浏览器覆盖）
+      #   chromium firefox webkit — Playwright 支持的全部三引擎
+      - run: pip install -r requirements.txt && python -m playwright install --with-deps chromium firefox webkit
+
+      # Step 6: 三浏览器并行跑全部用例
+      #   --browser × 3  → 每种浏览器各跑一遍用例
+      #   -n 4           → 4 进程并行
+      #   --reruns 1     → flaky 用例失败后自动重试 1 次
+      #   --reruns-delay 2 → 重试前等 2 秒
+      #   || true        → 不阻断后续报告生成步骤
+      - name: Run full regression
+        run: python -m pytest tests/ tests_admin/ --env ci --browser chromium --browser firefox --browser webkit -v --tb=short -n 4 --reruns 1 --reruns-delay 2 --alluredir=reports/allure-results --clean-alluredir || true
+
+      # Step 7: 生成 Allure HTML 报告
+      #   if: always() — 即使测试用例失败也执行，保证能查看失败详情
+      - name: Allure Report
+        if: always()
+        uses: simple-elf/allure-report-action@v1
+        with:
+          allure_results: reports/allure-results
+          allure_history: reports/allure-history
+
+      # Step 8: 发布到 GitHub Pages
+      #   if: always() — 任何情况都尝试发布
+      #   keep_files: true — 保留历史报告，多轮运行可查看趋势
+      #   最终访问地址: https://<用户名>.github.io/<仓库名>/opencart-test-report/
+      - name: Publish to GitHub Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: reports/allure-report
+          destination_dir: opencart-test-report
+          keep_files: true

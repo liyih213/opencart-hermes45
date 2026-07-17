@@ -1,0 +1,27 @@
+# 报告 & 截图
+reports/
+*.png
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# 调试脚本
+debug_*.py
+
+# IDE
+.vscode/
+.idea/
+
+# 环境
+venv/
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Allure
+allure-results/
+allure-report/

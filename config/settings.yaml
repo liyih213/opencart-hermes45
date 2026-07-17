@@ -1,0 +1,58 @@
+# ============================================================
+# OpenCart UI 自动化测试 — 环境配置
+# 可切换 demo / local 等不同环境
+# ============================================================
+
+# 当前激活的环境
+active_env: local
+
+environments:
+  demo:
+    name: "OpenCart Public Demo"
+    base_url: "https://demo.opencart.com"
+    api_url: "https://demo.opencart.com/index.php?route="
+
+  local:
+    name: "OpenCart Local"
+    base_url: "http://localhost"
+    api_url: "http://localhost/index.php?route="
+    admin_url: "http://localhost/admin"
+
+  ci:
+    name: "GitHub Actions CI"
+    base_url: "http://127.0.0.1:8080"
+    api_url: "http://127.0.0.1:8080/index.php?route="
+    admin_url: "http://127.0.0.1:8080/admin"
+
+# 浏览器配置
+browser:
+  name: chromium            # chromium / firefox / webkit
+  headless: false            # 调试时建议 false
+  slow_mo: 100               # 操作间隔 (ms)，调试时加大
+  viewport:
+    width: 1920
+    height: 1080
+  locale: "zh-CN"
+  timeout: 30000             # 默认超时 (ms)
+  navigation_timeout: 60000  # 页面导航超时 (ms)
+
+# 截图 & 录屏
+screenshot:
+  on_failure: true           # 失败自动截图
+  full_page: true
+
+video:
+  on_failure: true           # 失败自动录屏
+  dir: "reports/videos"
+
+# Allure 报告
+allure:
+  results_dir: "reports/allure-results"
+  report_dir: "reports/allure-report"
+  clean_on_start: true
+
+# 测试运行参数
+test:
+  workers: 2                 # 并行 worker 数 (pytest-xdist)
+  retries: 1                 # 失败重试次数
+  timeout: 120               # 单条用例超时 (s)
