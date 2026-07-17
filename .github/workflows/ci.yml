@@ -52,7 +52,9 @@ jobs:
       #   mysqli — MySQL 连接驱动；curl — HTTP 请求；gd — 图片处理
       #   mbstring — 多字节字符串；zip — 压缩/解压
       - uses: shivammathur/setup-php@v2
-        with: { php-version: '8.1', extensions: mysqli, curl, gd, mbstring, zip }
+        with:
+          php-version: '8.1'
+          extensions: mysqli, curl, gd, mbstring, zip
 
       # Step 3: 下载 OpenCart 4.0.2.3 → 部署 → 配置 → 导入 SQL → 启动 :8080
       - name: Setup OpenCart
@@ -70,7 +72,8 @@ jobs:
           sleep 3
       # Step 4: 安装 Python 3.12
       - uses: actions/setup-python@v5
-        with: { python-version: '3.12' }
+        with:
+          python-version: '3.12'
 
       # Step 5: 安装 Python 依赖 + Playwright Chromium（smoke 只装一个浏览器，快）
       #   --with-deps — 自动安装系统级依赖（libgtk、libnss 等）
@@ -113,7 +116,9 @@ jobs:
       # Step 1-4: 与 smoke 相同 — checkout → PHP → OpenCart → Python
       - uses: actions/checkout@v4
       - uses: shivammathur/setup-php@v2
-        with: { php-version: '8.1', extensions: mysqli, curl, gd, mbstring, zip }
+        with:
+          php-version: '8.1'
+          extensions: mysqli, curl, gd, mbstring, zip
       - name: Setup OpenCart
         run: |
           curl -sL https://github.com/opencart/opencart/archive/refs/tags/4.0.2.3.zip -o /tmp/oc.zip
@@ -127,7 +132,8 @@ jobs:
           php -S 127.0.0.1:8080 -t /var/www/html &
           sleep 3
       - uses: actions/setup-python@v5
-        with: { python-version: '3.12' }
+        with:
+          python-version: '3.12'
 
       # Step 5: 安装 3 个浏览器（完整回归需跨浏览器覆盖）
       #   chromium firefox webkit — Playwright 支持的全部三引擎
