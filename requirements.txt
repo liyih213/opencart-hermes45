@@ -7,3 +7,4 @@ pyyaml>=6.0.0
 python-slugify>=8.0.0
 pytest-xdist>=3.6.0
 pytest-rerunfailures>=14.0
+playwright-stealth>=2.0.0
