@@ -85,10 +85,9 @@ jobs:
         run: python -m pytest tests/ tests_admin/ --env ci --browser chromium --browser firefox --browser webkit -v --tb=short -n 4 --reruns 1 --reruns-delay 2 --alluredir=reports/allure-results --clean-alluredir || true
       - name: Generate Allure Report
         if: always()
-        uses: simple-elf/allure-report-action@v1
-        with:
-          allure_results: reports/allure-results
-          allure_history: reports/allure-history
+        run: |
+          npm install -g allure-commandline
+          allure generate reports/allure-results -o reports/allure-report --clean
       - name: Publish to GitHub Pages
         if: always()
         uses: peaceiris/actions-gh-pages@v3
