@@ -42,6 +42,7 @@ def pytest_configure(config):
     # 处理 --env 参数覆盖
     env_override = config.getoption("--env")
     if env_override:
+        _ = app_config.settings  # 触发加载
         app_config._settings["active_env"] = env_override
         logger.info(f"命令行环境覆盖: {env_override}")
 
